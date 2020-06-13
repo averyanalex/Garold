@@ -13,9 +13,7 @@ from discord.ext import commands
 import asyncio
 import logging
 
-
 debug = False
-
 
 # импорт языков
 lang_file = open('lang.yml', 'r', encoding="UTF-8")
