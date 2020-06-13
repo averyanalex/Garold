@@ -1,0 +1,7 @@
+db:
+  host: "forumidey.ru"
+  user: "garold_ваше_имя"
+  password: "очень_надёжный_пароль"
+  name: "garold_ваше_имя"
+  charset: "utf8mb4"
+token: "ваш_токен"

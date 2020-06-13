@@ -1,0 +1,28 @@
+en:
+  invite: "Add me to your server, and it will be cooler!"
+  send: "sent you"
+  prefix:
+    current: "Your current prefix is: \"%current_prefix%\". To change it, send %current_prefix%prefix [new prefix]"
+    changed: "Your previous prefix \"%current_prefix%\" changed to \"%new_prefix%\""
+  help:
+    title: "Help %current_page%/%total_pages%"
+    pages:
+      - "%cp%Test page
+
+      1help this message
+
+      and something else"
+      - "test page 2"
+      - "Test page 3"
+ru:
+  invite: "Добавь меня на свой сервер, и у вас станет круче!"
+  send: "написал вам"
+  prefix:
+    current: "Ваш текущий префикс: \"%current_prefix%\". Что-бы его сменить, введите %current_prefix%prefix [новый префикс]"
+    changed: "Ваш прошлый префикс \"%current_prefix%\" был сменён на \"%new_prefix%\""
+  help:
+    title: "Помощь %current_page%/%total_pages%"
+    pages:
+      - "Test page 1"
+      - "test page 2"
+      - "Test page 3"
