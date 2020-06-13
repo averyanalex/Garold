@@ -11,11 +11,11 @@ import yaml
 from Cybernator import Paginator
 from discord.ext import commands
 import asyncio
+import logging
+
 
 debug = False
 
-if debug:
-    import logging
 
 # импорт языков
 lang_file = open('lang.yml', 'r', encoding="UTF-8")
@@ -43,6 +43,20 @@ if debug:
     aiomysql_log_handler = logging.FileHandler(filename='aiomysql.log', encoding='utf-8', mode='w')
     aiomysql_log_handler.setFormatter(logging.Formatter('%(asctime)s:%(levelname)s:%(name)s: %(message)s'))
     aiomysql_logger.addHandler(aiomysql_log_handler)
+else:
+    # discord
+    discord_logger = logging.getLogger('discord')
+    discord_logger.setLevel(logging.ERROR)
+    discord_log_handler = logging.FileHandler(filename='discord.log', encoding='utf-8', mode='w')
+    discord_log_handler.setFormatter(logging.Formatter('%(asctime)s:%(levelname)s:%(name)s: %(message)s'))
+    discord_logger.addHandler(discord_log_handler)
+    # aiomysql
+    aiomysql_logger = logging.getLogger('aiomysql')
+    aiomysql_logger.setLevel(logging.ERROR)
+    aiomysql_log_handler = logging.FileHandler(filename='aiomysql.log', encoding='utf-8', mode='w')
+    aiomysql_log_handler.setFormatter(logging.Formatter('%(asctime)s:%(levelname)s:%(name)s: %(message)s'))
+    aiomysql_logger.addHandler(aiomysql_log_handler)
+
 
 ##################################
 #           НАСТРОЙКИ            #
@@ -50,7 +64,6 @@ if debug:
 
 default_lang = "en"
 default_prefix = "#"
-
 
 ##################################
 #           БАЗА ДАННЫХ          #
