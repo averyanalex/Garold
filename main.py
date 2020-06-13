@@ -27,7 +27,7 @@ data_file.close()
 settings_file = open('config.yml', 'r', encoding="UTF=8")
 settings = yaml.safe_load(settings_file)
 settings_file.close()
-# включаем логи
+# включаем логи в зависимости от настроек
 if debug:
     # discord
     discord_logger = logging.getLogger('discord')
