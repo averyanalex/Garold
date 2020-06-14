@@ -55,7 +55,6 @@ else:
     aiomysql_log_handler.setFormatter(logging.Formatter('%(asctime)s:%(levelname)s:%(name)s: %(message)s'))
     aiomysql_logger.addHandler(aiomysql_log_handler)
 
-
 ##################################
 #           НАСТРОЙКИ            #
 ##################################
@@ -113,7 +112,19 @@ async def get_prefix(guild_id):
 
 
 async def get_message_prefix(bot_but_what_is_it, message):
-    return get_prefix(message.guild.id)
+    con = await pool.acquire()
+    cur = await con.cursor()
+    await cur.execute(f"SELECT `prefix` FROM `guilds` WHERE `id` = %s", (message.guild.id,))
+    prefix_row = await cur.fetchone()
+    if prefix_row is not None:
+        await pool.release(con)
+        return prefix_row[0]
+    else:
+        await cur.execute(f"INSERT INTO `guilds` (`id`, `lang`, `prefix`) VALUES (%s, %s, %s)",
+                          (message.guild.id, default_lang, default_prefix))
+        print(f"В БД был добавлен сервер №{message.guild.id}")
+        await pool.release(con)
+        return default_prefix
 
 
 # создаём бота
@@ -259,15 +270,16 @@ async def prefix(ctx, new_prefix=None):
 
 
 # команда смена языка
-# todo: переделать команду на выбор языка с помощью реакций
 @bot.command()
 @commands.has_permissions(administrator=True)
-async def lang(ctx, given_lang):
-    con = await pool.acquire()
-    cur = await con.cursor()
-    await cur.execute(f"UPDATE `guilds` SET `lang` = %s WHERE `id` = %s", (given_lang, ctx.guild.id))
-    await ctx.send("Новый язык " + given_lang)
-    await pool.release(con)
+async def lang(ctx):
+    await ctx.send("started")
+
+    def check_reaction(react):
+        return react.message_id == ctx.message.id and react.member.id == ctx.author.id
+
+    payload = await bot.wait_for('raw_reaction_add', timeout=60, check=check_reaction)
+    await ctx.send(payload.emoji.name)
 
 
 # приглашение на сервер поддержки
@@ -321,6 +333,5 @@ async def pool_cleaner():
 # запускаем фоновые задачи
 bot.loop.create_task(locker())
 bot.loop.create_task(pool_cleaner())
-
 
 bot.run(settings['token'])
