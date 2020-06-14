@@ -96,24 +96,28 @@ print("Начинаю подключение к БД")
 pool = loop.run_until_complete(mysql_connect())
 
 
-async def get_prefix(bot_but_what_is_it, message):
+async def get_prefix(guild_id):
     con = await pool.acquire()
     cur = await con.cursor()
-    await cur.execute(f"SELECT `prefix` FROM `guilds` WHERE `id` = %s", (message.guild.id,))
-    rows = await cur.fetchall()
-    if len(rows) == 0:  # если вместо префикса нам выдали пустоту, добавляем сервер в БД
+    await cur.execute(f"SELECT `prefix` FROM `guilds` WHERE `id` = %s", (guild_id,))
+    prefix_row = await cur.fetchone()
+    if prefix_row is not None:
+        await pool.release(con)
+        return prefix_row[0]
+    else:
         await cur.execute(f"INSERT INTO `guilds` (`id`, `lang`, `prefix`) VALUES (%s, %s, %s)",
-                          (message.guild.id, default_lang, default_prefix))
-        print(f"В БД был добавлен сервер №{message.guild.id}")
+                          (guild_id, default_lang, default_prefix))
+        print(f"В БД был добавлен сервер №{guild_id}")
         await pool.release(con)
         return default_prefix
-    else:
-        await pool.release(con)
-        return rows[0]
+
+
+async def get_message_prefix(bot_but_what_is_it, message):
+    return get_prefix(message.guild.id)
 
 
 # создаём бота
-bot = commands.Bot(command_prefix=get_prefix)
+bot = commands.Bot(command_prefix=get_message_prefix)
 
 
 ##################################
@@ -199,15 +203,10 @@ bot.remove_command("help")
 # команда помощи
 @bot.command()
 async def help(ctx):
-    # подключаемся к БД
-    con = await pool.acquire()
-    cur = await con.cursor()
-    # узнаём текущий язык
+    # узнаём язык
     guild_lang = await get_lang(ctx.guild.id)
     # узнаём префикс
-    await cur.execute(f"SELECT `prefix` FROM `guilds` WHERE `id` = %s", (ctx.guild.id,))
-    row = await cur.fetchone()
-    guild_prefix = row[0]
+    guild_prefix = await get_prefix(ctx.guild.id)
     embeds = []
     # выставляем страницы
     for i in range(0, len(lang_data[guild_lang]['help']['pages'])):
@@ -220,7 +219,6 @@ async def help(ctx):
     # создаём массив страниц
     msg = await ctx.send(embed=embeds[0])
     page = Paginator(bot, msg, only=ctx.author, use_more=False, embeds=embeds, footer=False, timeout=120)
-    await pool.release(con)
     await page.start()
 
 
@@ -242,24 +240,22 @@ async def spam(ctx, arg):
 @bot.command()
 @commands.has_permissions(administrator=True)
 async def prefix(ctx, new_prefix=None):
-    # подключаемся к БД
-    con = await pool.acquire()
-    cur = await con.cursor()
-    # узнаём текущий префикс
-    await cur.execute(f"SELECT `prefix` FROM `guilds` WHERE `id` = %s", (ctx.guild.id,))
-    current_prefix = (await cur.fetchone())[0]
+    current_prefix = await get_prefix(ctx.guild.id)
     if new_prefix is None:  # пользователь не указал новый префикс
         message_to_send = lang_data[await get_lang(ctx.guild.id)]['prefix']['current']
         message_to_send = message_to_send.replace('%current_prefix%', current_prefix)
         await ctx.send(message_to_send)
     else:
         # меняем префикс на новый
+        # подключаемся к БД
+        con = await pool.acquire()
+        cur = await con.cursor()
         message_to_send = lang_data[await get_lang(ctx.guild.id)]['prefix']['changed']
         message_to_send = message_to_send.replace('%current_prefix%', current_prefix)
         message_to_send = message_to_send.replace('%new_prefix%', new_prefix)
         await cur.execute("UPDATE `guilds` SET `prefix` = %s WHERE `id` = %s", (new_prefix, ctx.guild.id))
         await ctx.send(message_to_send)
-    await pool.release(con)
+        await pool.release(con)
 
 
 # команда смена языка
