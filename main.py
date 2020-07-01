@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 # -*- coding: utf-8 -*-
-
+# тестовый комментарий
 
 ##################################
 #        ИМПОРТ БИБЛИОТЕК        #
@@ -12,15 +12,15 @@ import yaml
 from Cybernator import Paginator
 from discord.ext import commands
 import asyncio
-
-if sys.platform != "win32":
-    import uvloop
-    asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
 import logging
 import random
 import threading
 import queue
 
+if sys.platform != "win32":
+    import uvloop
+
+    asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
 
 debug = False
 
@@ -154,11 +154,13 @@ async def get_lang(guild_id):
     return guild_lang
 
 
-def read_kbd_input(inputQueue):
+def read_kbd_input(input_queue):
     print("Готов к обработке ввода с клавиатуры")
-    while (True):
+    while True:
         input_str = input()
-        inputQueue.put(input_str)
+        input_queue.put(input_str)
+
+
 ##################################
 #    АСИНХРОННЫЕ СОБЫТИЯ БОТА    #
 ##################################
@@ -349,15 +351,15 @@ async def pool_cleaner():
 
 
 # обработчик команд с клавиатуры
-async def keybord_handler():
-    inputQueue = queue.Queue()
+async def keyboard_handler():
+    input_queue = queue.Queue()
 
-    inputThread = threading.Thread(target=read_kbd_input, args=(inputQueue,), daemon=True)
-    inputThread.start()
+    input_thread = threading.Thread(target=read_kbd_input, args=(input_queue,), daemon=True)
+    input_thread.start()
 
-    while (True):
-        if (inputQueue.qsize() > 0):
-            input_str = inputQueue.get()
+    while True:
+        if input_queue.qsize() > 0:
+            input_str = input_queue.get()
             print(f"Вы ввели: {input_str}")
 
         await asyncio.sleep(0.5)
@@ -371,5 +373,5 @@ async def keybord_handler():
 bot.loop.create_task(locker())
 bot.loop.create_task(pool_cleaner())
 
-bot.loop.create_task(keybord_handler())
+bot.loop.create_task(keyboard_handler())
 bot.run(settings['token'])
