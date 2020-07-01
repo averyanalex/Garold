@@ -13,4 +13,4 @@ jobs:
       with:
         ftp-server: sftp://89.223.121.211:2022/
         ftp-username: averyanalex.01d1df1b
-        ftp-password: ${{ secrets.SFTP_PASSWORD }}
+        ftp-password: d27K1k231
