@@ -1,0 +1,17 @@
+on: push
+name: Publish Website
+jobs:
+  FTP-Deploy-Action:
+    name: FTP-Deploy-Action
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2.1.0
+      with:
+        fetch-depth: 2
+    - name: FTP-Deploy-Action
+      uses: SamKirkland/FTP-Deploy-Action@3.1.1
+      with:
+        ftp-server: sftp://${{ secrets.SFTP_HOST }}/
+        ftp-username: ${{ secrets.SFTP_USER }}
+        ftp-password: ${{ secrets.SFTP_PASSWORD }}
+        local-dir: ./
