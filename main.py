@@ -4,7 +4,6 @@
 ##################################
 #        ИМПОРТ БИБЛИОТЕК        #
 ##################################
-import sys
 import discord
 import aiomysql
 import yaml
@@ -15,12 +14,14 @@ import logging
 import random
 import threading
 import queue
-if sys.platform != 'win32':
-    print("На Windows нет uvloop")
-else:
+import youtube_dl
+
+try:
     import uvloop
 
     asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
+except ModuleNotFoundError:
+    print("ffff")
 
 debug = False
 
@@ -328,6 +329,19 @@ async def meme(ctx):
     embed_with_meme = discord.Embed(color=discord.Color.blue())
     embed_with_meme.set_image(url=random_meme)
     await ctx.send(embed=embed_with_meme)
+
+
+@bot.command()
+async def download(ctx, link_to_download):
+    options = {  # Настройки youtube_dl
+        'outtmpl': '%(title)s-%(id)s.%(ext)s',
+        'format': 'best'
+    }
+
+    ydl = youtube_dl.YoutubeDL(options)
+    r = ydl.extract_info(link_to_download, download=False)  # Вставляем нашу ссылку с ютуба
+    video_url = r['url']  # Получаем прямую ссылку на скачивание видео
+    await ctx.send(video_url)
 
 
 ##################################
