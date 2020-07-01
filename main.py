@@ -15,12 +15,12 @@ import logging
 import random
 import threading
 import queue
-try:
+if sys.platform != 'win32':
+    print("На Windows нет uvloop")
+else:
     import uvloop
 
     asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
-except ImportError:
-    print("Uvloop не установлен!")
 
 debug = False
 
