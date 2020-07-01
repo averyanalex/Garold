@@ -1,4 +1,6 @@
 en:
+  download:
+    download_now: "Download!"
   invite: "Add me to your server, and it will be cooler!"
   send: "sent you"
   prefix:
@@ -15,6 +17,8 @@ en:
       - "test page 2"
       - "Test page 3"
 ru:
+  download:
+    download_now: "Скачать!"
   invite: "Добавь меня на свой сервер, и у вас станет круче!"
   send: "написал вам"
   prefix:

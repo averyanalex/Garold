@@ -341,7 +341,8 @@ async def download(ctx, link_to_download):
     ydl = youtube_dl.YoutubeDL(options)
     r = ydl.extract_info(link_to_download, download=False)  # Вставляем нашу ссылку с ютуба
     video_url = r['url']  # Получаем прямую ссылку на скачивание видео
-    await ctx.send(embed=discord.Embed(title='Скачать!', url=video_url))
+    await ctx.send(embed=discord.Embed(title=lang_data[(await get_lang(ctx.guild.id))]['download']['download_now'],
+                                       url=video_url))
 
 
 ##################################
