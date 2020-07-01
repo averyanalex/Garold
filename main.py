@@ -11,7 +11,14 @@ import yaml
 from Cybernator import Paginator
 from discord.ext import commands
 import asyncio
+import uvloop
 import logging
+import random
+import threading
+import queue
+import time
+
+asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
 
 debug = False
 
@@ -145,6 +152,11 @@ async def get_lang(guild_id):
     return guild_lang
 
 
+def read_kbd_input(inputQueue):
+    print("Готов к обработке ввода с клавиатуры")
+    while (True):
+        input_str = input()
+        inputQueue.put(input_str)
 ##################################
 #    АСИНХРОННЫЕ СОБЫТИЯ БОТА    #
 ##################################
@@ -154,7 +166,7 @@ async def get_lang(guild_id):
 async def on_ready():
     guilds = await bot.fetch_guilds(limit=None).flatten()
     await bot.change_presence(activity=discord.Game(name=f"I am on {len(guilds)} servers"))
-    print(f"Бот запущен, количество серверов: {len(guilds)}")
+    print(f"Бот успешно запущен, количество серверов: {len(guilds)}")
 
 
 # бота добавили на сервер
@@ -306,6 +318,14 @@ async def members(ctx):
             await ctx.send(member)
 
 
+@bot.command(name="meme", aliases=("mem", "мем", "прикол", "пикча"))
+async def meme(ctx):
+    random_meme = random.choice(data['memes']['ru'])
+    embed_with_meme = discord.Embed(color=discord.Color.blue())
+    embed_with_meme.set_image(url=random_meme)
+    await ctx.send(embed=embed_with_meme)
+
+
 ##################################
 #   РЕГУЛЯРНЫЕ ФОНОВЫЕ ЗАДАЧИ    #
 ##################################
@@ -326,6 +346,21 @@ async def pool_cleaner():
     await pool.clear()
 
 
+# обработчик команд с клавиатуры
+async def keybord_handler():
+    inputQueue = queue.Queue()
+
+    inputThread = threading.Thread(target=read_kbd_input, args=(inputQueue,), daemon=True)
+    inputThread.start()
+
+    while (True):
+        if (inputQueue.qsize() > 0):
+            input_str = inputQueue.get()
+            print(f"Вы ввели: {input_str}")
+
+        await asyncio.sleep(0.5)
+
+
 ##################################
 #            ЗАПУСК              #
 ##################################
@@ -334,4 +369,5 @@ async def pool_cleaner():
 bot.loop.create_task(locker())
 bot.loop.create_task(pool_cleaner())
 
+bot.loop.create_task(keybord_handler())
 bot.run(settings['token'])
