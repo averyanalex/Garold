@@ -1,6 +1,5 @@
 #!/usr/bin/python3
 # -*- coding: utf-8 -*-
-# тестовый комментарий
 
 ##################################
 #        ИМПОРТ БИБЛИОТЕК        #
@@ -16,11 +15,12 @@ import logging
 import random
 import threading
 import queue
-
-if sys.platform != "win32":
+try:
     import uvloop
 
     asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
+except ImportError:
+    print("Uvloop не установлен!")
 
 debug = False
 
