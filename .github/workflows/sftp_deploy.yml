@@ -11,7 +11,6 @@ jobs:
     - name: FTP-Deploy-Action
       uses: SamKirkland/FTP-Deploy-Action@3.1.1
       with:
-        ftp-server: sftp://${{ secrets.SFTP_HOST }}:${{ secrets.SFTP_PORT }}/
-        ftp-username: ${{ secrets.SFTP_USER }}
+        ftp-server: sftp://89.223.121.211:2022/
+        ftp-username: averyanalex.01d1df1b
         ftp-password: ${{ secrets.SFTP_PASSWORD }}
-        local-dir: ./
