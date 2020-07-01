@@ -5,20 +5,22 @@
 ##################################
 #        ИМПОРТ БИБЛИОТЕК        #
 ##################################
+import sys
 import discord
 import aiomysql
 import yaml
 from Cybernator import Paginator
 from discord.ext import commands
 import asyncio
-import uvloop
+
+if sys.platform != "win32":
+    import uvloop
+    asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
 import logging
 import random
 import threading
 import queue
-import time
 
-asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
 
 debug = False
 
