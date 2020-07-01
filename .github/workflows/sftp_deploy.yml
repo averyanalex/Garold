@@ -12,5 +12,6 @@ jobs:
       uses: SamKirkland/FTP-Deploy-Action@3.1.1
       with:
         ftp-server: sftp://89.223.121.211:2022/
-        ftp-username: averyanalex.01d1df1b
-        ftp-password: d27K1k231
+        git-ftp-args: --insecure
+        ftp-username: ${{ secrets.SFTP_USER }}
+        ftp-password: ${{ secrets.SFTP_PASSWORD }}
