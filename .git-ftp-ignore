@@ -1,0 +1,12 @@
+.gitignore
+*/.gitignore
+.github
+*/.gitkeep
+example_config.yml
+requirements.txt
+.git-ftp-ignore
+.git-ftp-include
+.gitlab-ci.yml
+README.md
+config.yml
+logs/*
