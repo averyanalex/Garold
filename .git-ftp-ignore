@@ -10,5 +10,5 @@ README.md
 config.yml
 logs/*
 .revision
-.git-ftp.log
 .github/
+.github/*
