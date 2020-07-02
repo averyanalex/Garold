@@ -381,13 +381,6 @@ async def keyboard_handler():
         await asyncio.sleep(0.5)
 
 
-def start_web():
-    print("WEB")
-    # web_log_file = open('web_server.log', 'w', encoding="UTF=8")
-    web_server_process = subprocess.Popen("python web_server.py", stdout=subprocess.PIPE)
-    print(web_server_process.communicate())
-
-
 ##################################
 #            ЗАПУСК              #
 ##################################

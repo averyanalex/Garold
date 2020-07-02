@@ -1,9 +1,6 @@
 import bottle
-import yaml
 
-tokens_file = open('yt_download_tokens.yml', 'r', encoding="UTF-8")
-tokens_data = yaml.safe_load(tokens_file)
-tokens_file.close()
+tokens_data = {'help': 12345678}
 
 
 @bottle.get('/msg')
@@ -12,4 +9,4 @@ def send_youtube_download_link():
     return f"LINK: {tokens_data[token]}"
 
 
-bottle.run(host='localhost', port=8080, debug=True)
+bottle.run(host='0.0.0.0', port=48000, debug=False)
