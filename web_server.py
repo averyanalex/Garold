@@ -1,3 +1,5 @@
+#!/usr/bin/python3
+# -*- coding: utf-8 -*-
 import bottle
 
 tokens_data = {'help': 12345678}

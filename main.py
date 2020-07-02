@@ -392,7 +392,7 @@ bot.loop.create_task(pool_cleaner())
 bot.loop.create_task(keyboard_handler())
 
 print("Запуск веб-сервера")
-web_server_process = subprocess.Popen("python web_server.py", stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+web_server_process = subprocess.Popen("web_server.py", stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
                                       stdin=subprocess.DEVNULL)
 
 bot.run(settings['token'])
