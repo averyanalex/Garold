@@ -11,7 +11,7 @@ with open('config.yml', 'r', encoding="UTF=8") as settings_file:
     settings = yaml.safe_load(settings_file)
     settings_file.close()
 
-mysql_connection = pymysql.connect(host=settings['db']['host'], user=settings['db']['user'],
+mysql_connection = pymysql.connect(host=settings['db']['host'], user=settings['db']['user'], autocommit=True,
                                    password=settings['db']['password'], database=settings['db']['name'])
 cursor = mysql_connection.cursor()
 cursor.execute("SELECT VERSION()")
@@ -25,7 +25,7 @@ def send_youtube_download_link():
     cursor.execute(f"SELECT `url` FROM `redirects` WHERE `token` = %s", (token,))
     url_row = cursor.fetchone()
     if url_row is not None:
-        bottle.redirect(url=url_row[0], code=301)
+        return bottle.redirect(url=url_row[0], code=301)
     else:
         return "Неверный токен"
 
