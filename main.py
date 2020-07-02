@@ -4,7 +4,6 @@
 ##################################
 #        ИМПОРТ БИБЛИОТЕК        #
 ##################################
-import sys
 import discord
 import aiomysql
 import yaml
@@ -17,6 +16,7 @@ import threading
 import queue
 import youtube_dl
 import subprocess
+import uuid
 
 try:
     import uvloop
@@ -28,9 +28,9 @@ except ModuleNotFoundError:
 debug = False
 
 # импорт языков
-lang_file = open('lang.yml', 'r', encoding="UTF-8")
-lang_data = yaml.safe_load(lang_file)
-lang_file.close()
+with open('lang.yml', 'r', encoding="UTF-8") as lang_file:
+    lang_data = yaml.safe_load(lang_file)
+    lang_file.close()
 # импорт данных
 data_file = open('data.yml', 'r', encoding="UTF=8")
 data = yaml.safe_load(data_file)
@@ -335,16 +335,21 @@ async def meme(ctx):
 
 @bot.command()
 async def download(ctx, link_to_download):
+    con = await pool.acquire()
+    cur = await con.cursor()
     options = {  # Настройки youtube_dl
         'outtmpl': '%(title)s-%(id)s.%(ext)s',
         'format': 'best'
     }
-
     ydl = youtube_dl.YoutubeDL(options)
     r = ydl.extract_info(link_to_download, download=False)  # Вставляем нашу ссылку с ютуба
     video_url = r['url']  # Получаем прямую ссылку на скачивание видео
+    redirect_id = (str(uuid.uuid4()))[0:7]
+    await cur.execute(f"INSERT INTO `redirects` (`token`, `url`) VALUES (%s, %s)",
+                      (redirect_id, video_url))
+    url_to_send = f"https://garold.forumidey.ru/redirect?token={redirect_id}"
     await ctx.send(embed=discord.Embed(title=lang_data[(await get_lang(ctx.guild.id))]['download']['download_now'],
-                                       url=video_url))
+                                       url=url_to_send))
 
 
 ##################################
