@@ -10,3 +10,4 @@ requirements.txt
 README.md
 config.yml
 logs/*
+.revision
