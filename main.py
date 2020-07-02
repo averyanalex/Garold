@@ -15,6 +15,7 @@ import random
 import threading
 import queue
 import youtube_dl
+import subprocess
 
 try:
     import uvloop
@@ -42,26 +43,26 @@ if debug:
     # discord
     discord_logger = logging.getLogger('discord')
     discord_logger.setLevel(logging.INFO)
-    discord_log_handler = logging.FileHandler(filename='discord.log', encoding='utf-8', mode='w')
+    discord_log_handler = logging.FileHandler(filename='logs/discord.log', encoding='utf-8', mode='w')
     discord_log_handler.setFormatter(logging.Formatter('%(asctime)s:%(levelname)s:%(name)s: %(message)s'))
     discord_logger.addHandler(discord_log_handler)
     # aiomysql
     aiomysql_logger = logging.getLogger('aiomysql')
     aiomysql_logger.setLevel(logging.INFO)
-    aiomysql_log_handler = logging.FileHandler(filename='aiomysql.log', encoding='utf-8', mode='w')
+    aiomysql_log_handler = logging.FileHandler(filename='logs/aiomysql.log', encoding='utf-8', mode='w')
     aiomysql_log_handler.setFormatter(logging.Formatter('%(asctime)s:%(levelname)s:%(name)s: %(message)s'))
     aiomysql_logger.addHandler(aiomysql_log_handler)
 else:
     # discord
     discord_logger = logging.getLogger('discord')
     discord_logger.setLevel(logging.ERROR)
-    discord_log_handler = logging.FileHandler(filename='discord.log', encoding='utf-8', mode='w')
+    discord_log_handler = logging.FileHandler(filename='./logs/discord.log', encoding='utf-8', mode='w')
     discord_log_handler.setFormatter(logging.Formatter('%(asctime)s:%(levelname)s:%(name)s: %(message)s'))
     discord_logger.addHandler(discord_log_handler)
     # aiomysql
     aiomysql_logger = logging.getLogger('aiomysql')
     aiomysql_logger.setLevel(logging.ERROR)
-    aiomysql_log_handler = logging.FileHandler(filename='aiomysql.log', encoding='utf-8', mode='w')
+    aiomysql_log_handler = logging.FileHandler(filename='logs/aiomysql.log', encoding='utf-8', mode='w')
     aiomysql_log_handler.setFormatter(logging.Formatter('%(asctime)s:%(levelname)s:%(name)s: %(message)s'))
     aiomysql_logger.addHandler(aiomysql_log_handler)
 
@@ -380,13 +381,25 @@ async def keyboard_handler():
         await asyncio.sleep(0.5)
 
 
+def start_web():
+    print("WEB")
+    # web_log_file = open('web_server.log', 'w', encoding="UTF=8")
+    web_server_process = subprocess.Popen("python web_server.py", stdout=subprocess.PIPE)
+    print(web_server_process.communicate())
+
+
 ##################################
 #            ЗАПУСК              #
 ##################################
 
+
 # запускаем фоновые задачи
 bot.loop.create_task(locker())
 bot.loop.create_task(pool_cleaner())
-
 bot.loop.create_task(keyboard_handler())
+
+print("Запуск веб-сервера")
+web_server_process = subprocess.Popen("python web_server.py", stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                                      stdin=subprocess.DEVNULL)
+
 bot.run(settings['token'])

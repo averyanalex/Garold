@@ -3,4 +3,5 @@ aiomysql>=0.0.20
 PyYAML>=5.3.1
 Cybernator>=0.3
 youtube_dl
+bottle
 uvloop
