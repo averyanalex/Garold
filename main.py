@@ -10,6 +10,7 @@ import aiomysql
 import yaml
 from Cybernator import Paginator
 from discord.ext import commands
+from discord.voice_client import VoiceClient
 import asyncio
 import logging
 import random
@@ -343,6 +344,20 @@ async def download(ctx, link_to_download):
     url_to_send = f"https://garold.forumidey.ru/redirect?token={redirect_id}"
     await ctx.send(embed=discord.Embed(title=lang_data[(await get_lang(ctx.guild.id))]['download']['download_now'],
                                        url=url_to_send))
+
+
+@bot.command(pass_context=True, no_pm=True)
+async def play(ctx, *, song: str):
+    voice_channel = ctx.author.voice.channel
+    # only play music if user is in a voice channel
+    if voice_channel is not None:
+        # grab user's voice channel
+        channel = voice_channel.name
+        await ctx.send('User is in channel: ' + channel)
+        # create StreamPlayer
+        vc = await voice_channel.connect()
+        vc.play(discord.FFmpegPCMAudio('testing.mp3'))
+        ctx.send(vc.is_playing())
 
 
 ##################################
