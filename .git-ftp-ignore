@@ -1,6 +1,5 @@
 .gitignore
 */.gitignore
-.github
 */.gitkeep
 example_config.yml
 requirements.txt
@@ -11,3 +10,5 @@ README.md
 config.yml
 logs/*
 .revision
+.git-ftp.log
+.github/
