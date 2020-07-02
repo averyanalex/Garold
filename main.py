@@ -344,7 +344,7 @@ async def download(ctx, link_to_download):
     ydl = youtube_dl.YoutubeDL(options)
     r = ydl.extract_info(link_to_download, download=False)  # Вставляем нашу ссылку с ютуба
     video_url = r['url']  # Получаем прямую ссылку на скачивание видео
-    redirect_id = (str(uuid.uuid4()))[0:7]
+    redirect_id = (str(uuid.uuid4()))[0:8]
     await cur.execute(f"INSERT INTO `redirects` (`token`, `url`) VALUES (%s, %s)",
                       (redirect_id, video_url))
     url_to_send = f"https://garold.forumidey.ru/redirect?token={redirect_id}"
