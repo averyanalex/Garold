@@ -4,6 +4,7 @@
 ##################################
 #        ИМПОРТ БИБЛИОТЕК        #
 ##################################
+import sys
 import discord
 import aiomysql
 import yaml
@@ -22,7 +23,7 @@ try:
 
     asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
 except ModuleNotFoundError:
-    print("ffff")
+    print("У вас не установлен uvloop")
 
 debug = False
 
@@ -392,7 +393,13 @@ bot.loop.create_task(pool_cleaner())
 bot.loop.create_task(keyboard_handler())
 
 print("Запуск веб-сервера")
-web_server_process = subprocess.Popen("web_server.py", stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
-                                      stdin=subprocess.DEVNULL)
+try:
+    print("Пытаюсь запустить python3")
+    web_server_process = subprocess.Popen(['python3 web_server.py'], stdout=subprocess.DEVNULL,
+                                          stderr=subprocess.DEVNULL, stdin=subprocess.DEVNULL)
+except FileNotFoundError:
+    print("Не удалось, запускаю python")
+    web_server_process = subprocess.Popen(['python', 'web_server.py'], stdout=subprocess.DEVNULL,
+                                          stderr=subprocess.DEVNULL, stdin=subprocess.DEVNULL)
 
 bot.run(settings['token'])
