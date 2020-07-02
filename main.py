@@ -4,6 +4,7 @@
 ##################################
 #        ИМПОРТ БИБЛИОТЕК        #
 ##################################
+print("Начат импорт библиотек")
 import discord
 import aiomysql
 import yaml
@@ -32,40 +33,32 @@ with open('lang.yml', 'r', encoding="UTF-8") as lang_file:
     lang_data = yaml.safe_load(lang_file)
     lang_file.close()
 # импорт данных
-data_file = open('data.yml', 'r', encoding="UTF=8")
-data = yaml.safe_load(data_file)
-data_file.close()
+with open('data.yml', 'r', encoding="UTF-8") as data_file:
+    data = yaml.safe_load(data_file)
+    data_file.close()
 # импорт настроек
-settings_file = open('config.yml', 'r', encoding="UTF=8")
-settings = yaml.safe_load(settings_file)
-settings_file.close()
+with open('config.yml', 'r', encoding="UTF-8") as settings_file:
+    config = yaml.safe_load(settings_file)
+    settings_file.close()
+
 # включаем логи в зависимости от настроек
+discord_logger = logging.getLogger('discord')
+aiomysql_logger = logging.getLogger('aiomysql')
+
 if debug:
-    # discord
-    discord_logger = logging.getLogger('discord')
     discord_logger.setLevel(logging.INFO)
-    discord_log_handler = logging.FileHandler(filename='logs/discord.log', encoding='utf-8', mode='w')
-    discord_log_handler.setFormatter(logging.Formatter('%(asctime)s:%(levelname)s:%(name)s: %(message)s'))
-    discord_logger.addHandler(discord_log_handler)
-    # aiomysql
-    aiomysql_logger = logging.getLogger('aiomysql')
     aiomysql_logger.setLevel(logging.INFO)
-    aiomysql_log_handler = logging.FileHandler(filename='logs/aiomysql.log', encoding='utf-8', mode='w')
-    aiomysql_log_handler.setFormatter(logging.Formatter('%(asctime)s:%(levelname)s:%(name)s: %(message)s'))
-    aiomysql_logger.addHandler(aiomysql_log_handler)
 else:
-    # discord
-    discord_logger = logging.getLogger('discord')
     discord_logger.setLevel(logging.ERROR)
-    discord_log_handler = logging.FileHandler(filename='./logs/discord.log', encoding='utf-8', mode='w')
-    discord_log_handler.setFormatter(logging.Formatter('%(asctime)s:%(levelname)s:%(name)s: %(message)s'))
-    discord_logger.addHandler(discord_log_handler)
-    # aiomysql
-    aiomysql_logger = logging.getLogger('aiomysql')
     aiomysql_logger.setLevel(logging.ERROR)
-    aiomysql_log_handler = logging.FileHandler(filename='logs/aiomysql.log', encoding='utf-8', mode='w')
-    aiomysql_log_handler.setFormatter(logging.Formatter('%(asctime)s:%(levelname)s:%(name)s: %(message)s'))
-    aiomysql_logger.addHandler(aiomysql_log_handler)
+
+discord_log_handler = logging.FileHandler(filename='logs/discord.log', encoding='utf-8', mode='w')
+discord_log_handler.setFormatter(logging.Formatter('%(asctime)s:%(levelname)s:%(name)s: %(message)s'))
+discord_logger.addHandler(discord_log_handler)
+
+aiomysql_log_handler = logging.FileHandler(filename='logs/aiomysql.log', encoding='utf-8', mode='w')
+aiomysql_log_handler.setFormatter(logging.Formatter('%(asctime)s:%(levelname)s:%(name)s: %(message)s'))
+aiomysql_logger.addHandler(aiomysql_log_handler)
 
 ##################################
 #           НАСТРОЙКИ            #
@@ -83,22 +76,22 @@ loop = asyncio.get_event_loop()
 # подключаемся к БД
 async def mysql_connect():
     if debug:
-        created_pool = await aiomysql.create_pool(host=settings['db']['host'], user=settings['db']['user'],
-                                                  password=settings['db']['password'],
-                                                  db=settings['db']['name'], charset=settings['db']['charset'],
+        created_pool = await aiomysql.create_pool(host=config['db']['host'], user=config['db']['user'],
+                                                  password=config['db']['password'],
+                                                  db=config['db']['name'], charset=config['db']['charset'],
                                                   autocommit=True, loop=loop, maxsize=100,
                                                   minsize=5, echo=True)
     else:
-        created_pool = await aiomysql.create_pool(host=settings['db']['host'], user=settings['db']['user'],
-                                                  password=settings['db']['password'],
-                                                  db=settings['db']['name'], charset=settings['db']['charset'],
+        created_pool = await aiomysql.create_pool(host=config['db']['host'], user=config['db']['user'],
+                                                  password=config['db']['password'],
+                                                  db=config['db']['name'], charset=config['db']['charset'],
                                                   autocommit=True, loop=loop, maxsize=100,
                                                   minsize=5, echo=False)
     con = await created_pool.acquire()
     cursor = await con.cursor()
     await cursor.execute("SELECT VERSION()")
     version = (await cursor.fetchone())[0]
-    print(f"Пул подключений к БД {settings['db']['name']} на {version} создан")
+    print(f"Пул подключений к БД {config['db']['name']} на {version} создан")
     await created_pool.release(con)
     return created_pool
 
@@ -123,7 +116,7 @@ async def get_prefix(guild_id):
         return default_prefix
 
 
-async def get_message_prefix(bot_but_what_is_it, message):
+async def get_message_prefix(given_bot, message):
     con = await pool.acquire()
     cur = await con.cursor()
     await cur.execute(f"SELECT `prefix` FROM `guilds` WHERE `id` = %s", (message.guild.id,))
@@ -140,7 +133,7 @@ async def get_message_prefix(bot_but_what_is_it, message):
 
 
 # создаём бота
-bot = commands.Bot(command_prefix=get_message_prefix)
+bot = commands.Bot(command_prefix=get_message_prefix, case_insensitive=True)
 
 
 ##################################
@@ -397,8 +390,10 @@ bot.loop.create_task(locker())
 bot.loop.create_task(pool_cleaner())
 bot.loop.create_task(keyboard_handler())
 
-print("Запуск веб-сервера")
-web_server_process = subprocess.Popen(['python', 'web_server.py'], stdout=subprocess.DEVNULL,
-                                      stderr=subprocess.DEVNULL, stdin=subprocess.DEVNULL)
+# запускаем веб сервер
+with open('logs/web.log', 'w', encoding="UTF-8") as web_log_file:
+    print("Запуск веб-сервера")
+    web_server_process = subprocess.Popen(['python', 'web_server.py'], stdout=web_log_file,
+                                          stderr=web_log_file, stdin=subprocess.DEVNULL)
 
-bot.run(settings['token'])
+bot.run(config['token'])
