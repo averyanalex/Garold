@@ -23,7 +23,7 @@ from discord.ext import commands
 
 try:
     import uvloop
-
+    print("Отлично! Будем использовать uvloop")
     asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
 except ModuleNotFoundError:
     print("У вас не установлен uvloop")
