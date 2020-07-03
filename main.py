@@ -5,20 +5,21 @@
 #        ИМПОРТ БИБЛИОТЕК        #
 ##################################
 print("Начат импорт библиотек")
-import discord
-import aiomysql
-import yaml
-from Cybernator import Paginator
-from discord.ext import commands
-from discord.voice_client import VoiceClient
 import asyncio
 import logging
-import random
-import threading
 import queue
-import youtube_dl
+import random
 import subprocess
+import threading
 import uuid
+import pymysql
+import aiomysql
+import discord
+import yaml
+import youtube_dl
+import sys
+from Cybernator import Paginator
+from discord.ext import commands
 
 try:
     import uvloop
@@ -65,8 +66,8 @@ aiomysql_logger.addHandler(aiomysql_log_handler)
 #           НАСТРОЙКИ            #
 ##################################
 
-default_lang = "en"
-default_prefix = "#"
+default_lang = "ru"
+default_prefix = "&"
 
 ##################################
 #           БАЗА ДАННЫХ          #
@@ -76,18 +77,22 @@ loop = asyncio.get_event_loop()
 
 # подключаемся к БД
 async def mysql_connect():
-    if debug:
-        created_pool = await aiomysql.create_pool(host=config['db']['host'], user=config['db']['user'],
-                                                  password=config['db']['password'],
-                                                  db=config['db']['name'], charset=config['db']['charset'],
-                                                  autocommit=True, loop=loop, maxsize=100,
-                                                  minsize=5, echo=True)
-    else:
-        created_pool = await aiomysql.create_pool(host=config['db']['host'], user=config['db']['user'],
-                                                  password=config['db']['password'],
-                                                  db=config['db']['name'], charset=config['db']['charset'],
-                                                  autocommit=True, loop=loop, maxsize=100,
-                                                  minsize=5, echo=False)
+    try:
+        if debug:
+            created_pool = await aiomysql.create_pool(host=config['db']['host'], user=config['db']['user'],
+                                                      password=config['db']['password'],
+                                                      db=config['db']['name'], charset=config['db']['charset'],
+                                                      autocommit=True, loop=loop, maxsize=100,
+                                                      minsize=5, echo=True)
+        else:
+            created_pool = await aiomysql.create_pool(host=config['db']['host'], user=config['db']['user'],
+                                                      password=config['db']['password'],
+                                                      db=config['db']['name'], charset=config['db']['charset'],
+                                                      autocommit=True, loop=loop, maxsize=100,
+                                                      minsize=5, echo=False)
+    except pymysql.err.OperationalError:
+        print(f"Не могу подключиться к MySQL серверу на {config['db']['host']}, проверьте соединение с интернетом!")
+        sys.exit(16)
     con = await created_pool.acquire()
     cursor = await con.cursor()
     await cursor.execute("SELECT VERSION()")
@@ -101,35 +106,41 @@ print("Начинаю подключение к БД")
 pool = loop.run_until_complete(mysql_connect())
 
 
-async def get_prefix(guild_id):
+async def get_prefix(context):
     con = await pool.acquire()
     cur = await con.cursor()
-    await cur.execute(f"SELECT `prefix` FROM `guilds` WHERE `id` = %s", (guild_id,))
-    prefix_row = await cur.fetchone()
-    if prefix_row is not None:
-        await pool.release(con)
-        return prefix_row[0]
+    if context.guild is not None:
+        await cur.execute(f"SELECT `prefix` FROM `guilds` WHERE `id` = %s", (context.guild.id,))
+        prefix_row = await cur.fetchone()
+        if prefix_row is not None:
+            await pool.release(con)
+            return prefix_row[0]
+        else:
+            await cur.execute(f"INSERT INTO `guilds` (`id`, `lang`, `prefix`) VALUES (%s, %s, %s)",
+                              (context.guild.id, default_lang, default_prefix))
+            print(f"В БД был добавлен сервер №{context.guild.id}")
+            await pool.release(con)
+            return default_prefix
     else:
-        await cur.execute(f"INSERT INTO `guilds` (`id`, `lang`, `prefix`) VALUES (%s, %s, %s)",
-                          (guild_id, default_lang, default_prefix))
-        print(f"В БД был добавлен сервер №{guild_id}")
-        await pool.release(con)
-        return default_prefix
+        return "&"
 
 
 async def get_message_prefix(given_bot, message):
     con = await pool.acquire()
     cur = await con.cursor()
-    await cur.execute(f"SELECT `prefix` FROM `guilds` WHERE `id` = %s", (message.guild.id,))
-    prefix_row = await cur.fetchone()
-    if prefix_row is not None:
-        await pool.release(con)
-        return prefix_row[0]
+    if message.guild is not None:
+        await cur.execute(f"SELECT `prefix` FROM `guilds` WHERE `id` = %s", (message.guild.id,))
+        prefix_row = await cur.fetchone()
+        if prefix_row is not None:
+            await pool.release(con)
+            return prefix_row[0]
+        else:
+            await cur.execute(f"INSERT INTO `guilds` (`id`, `lang`, `prefix`) VALUES (%s, %s, %s)",
+                              (message.guild.id, default_lang, default_prefix))
+            print(f"В БД был добавлен сервер №{message.guild.id}")
+            await pool.release(con)
+            return default_prefix
     else:
-        await cur.execute(f"INSERT INTO `guilds` (`id`, `lang`, `prefix`) VALUES (%s, %s, %s)",
-                          (message.guild.id, default_lang, default_prefix))
-        print(f"В БД был добавлен сервер №{message.guild.id}")
-        await pool.release(con)
         return default_prefix
 
 
@@ -141,14 +152,26 @@ bot = commands.Bot(command_prefix=get_message_prefix, case_insensitive=True)
 #            ФУНКЦИИ             #
 ##################################
 
-# получение префикса
-async def get_lang(guild_id):
+# получение языка
+async def get_lang(context):
     con = await pool.acquire()
     cur = await con.cursor()
-    await cur.execute(f"SELECT `lang` FROM `guilds` WHERE `id` = %s", (guild_id,))
-    guild_lang = (await cur.fetchone())[0]
-    await pool.release(con)
-    return guild_lang
+    if context.guild is not None:
+        await cur.execute(f"SELECT `lang` FROM `guilds` WHERE `id` = %s", (context.guild.id,))
+        guild_lang = (await cur.fetchone())[0]
+        await pool.release(con)
+        return guild_lang
+    else:
+        await cur.execute(f"SELECT `lang` FROM `users` WHERE `id` = %s", (context.author.id,))
+        lang_row = await cur.fetchone()
+        if lang_row is not None:
+            await pool.release(con)
+            return lang_row[0]
+        else:
+            await cur.execute("INSERT INTO `users` (`id`, `lang`) VALUES (%s, %s)",
+                              (context.author.id, default_lang))
+            await pool.release(con)
+            return default_lang
 
 
 def read_kbd_input(input_queue):
@@ -161,6 +184,18 @@ def read_kbd_input(input_queue):
 ##################################
 #    АСИНХРОННЫЕ СОБЫТИЯ БОТА    #
 ##################################
+
+# бот подключен
+@bot.event
+async def on_connect():
+    print("Подключен к серверам Discord")
+
+
+# соеденение потеряно
+@bot.event
+async def on_disconnect():
+    print("Соеденение с Discord потеряно!")
+
 
 # бот запущен
 @bot.event
@@ -195,8 +230,14 @@ async def on_command_error(ctx, error):
     emoji_load = discord.utils.get(emoji_guild.emojis, name="load")
     await ctx.message.add_reaction(str(emoji_load))
     errors_channel = bot.get_channel(720535391001772143)
-    await errors_channel.send(embed=discord.Embed(description=f"{ctx.author} на сервере {ctx.guild.name} спровоцировал "
-                                                              f"ошибку: {error}", colour=discord.Color.red()))
+    if ctx.guild is not None:
+        await errors_channel.send(embed=discord.Embed(description=f"{ctx.author} на сервере {ctx.guild.name} "
+                                                                  f"спровоцировал ошибку: {error}",
+                                                      colour=discord.Color.red()))
+    else:
+        await errors_channel.send(embed=discord.Embed(description=f"{ctx.author}, написав в ЛС боту, "
+                                                                  f"спровоцировал ошибку: {error}",
+                                                      colour=discord.Color.red()))
 
 
 @bot.event
@@ -216,7 +257,7 @@ async def ping(ctx):
 
 @bot.command()
 async def send(ctx, member: discord.Member, *, message):
-    guild_lang = await get_lang(ctx.guild.id)
+    guild_lang = await get_lang(ctx)
     await member.send(f"{ctx.author} {lang_data[guild_lang]['send']}: {message}")
 
 
@@ -228,9 +269,9 @@ bot.remove_command("help")
 @bot.command()
 async def help(ctx):
     # узнаём язык
-    guild_lang = await get_lang(ctx.guild.id)
+    guild_lang = await get_lang(ctx)
     # узнаём префикс
-    guild_prefix = await get_prefix(ctx.guild.id)
+    guild_prefix = await get_prefix(ctx)
     embeds = []
     # выставляем страницы
     for i in range(0, len(lang_data[guild_lang]['help']['pages'])):
@@ -261,12 +302,12 @@ async def spam(ctx, arg):
 
 
 # команда для смена префикса
-@bot.command()
+@bot.command(no_pm=True)
 @commands.has_permissions(administrator=True)
 async def prefix(ctx, new_prefix=None):
-    current_prefix = await get_prefix(ctx.guild.id)
+    current_prefix = await get_prefix(ctx)
     if new_prefix is None:  # пользователь не указал новый префикс
-        message_to_send = lang_data[await get_lang(ctx.guild.id)]['prefix']['current']
+        message_to_send = lang_data[await get_lang(ctx)]['prefix']['current']
         message_to_send = message_to_send.replace('%current_prefix%', current_prefix)
         await ctx.send(message_to_send)
     else:
@@ -274,7 +315,7 @@ async def prefix(ctx, new_prefix=None):
         # подключаемся к БД
         con = await pool.acquire()
         cur = await con.cursor()
-        message_to_send = lang_data[await get_lang(ctx.guild.id)]['prefix']['changed']
+        message_to_send = lang_data[await get_lang(ctx)]['prefix']['changed']
         message_to_send = message_to_send.replace('%current_prefix%', current_prefix)
         message_to_send = message_to_send.replace('%new_prefix%', new_prefix)
         await cur.execute("UPDATE `guilds` SET `prefix` = %s WHERE `id` = %s", (new_prefix, ctx.guild.id))
@@ -283,7 +324,7 @@ async def prefix(ctx, new_prefix=None):
 
 
 # команда смена языка
-@bot.command()
+@bot.command(no_pm=True)
 @commands.has_permissions(administrator=True)
 async def lang(ctx):
     await ctx.send("started")
@@ -304,7 +345,7 @@ async def support(ctx):
 # отправляет ссылку на добавления бота на сервер
 @bot.command()
 async def invite(ctx):
-    guild_lang = await get_lang(ctx.guild.id)
+    guild_lang = await get_lang(ctx)
     await ctx.send(embed=discord.Embed(description=f"{lang_data[guild_lang]['invite']}\nhttps://discord.com/oauth2"
                                                    f"/authorize?client_id"
                                                    f"=719498715769077771&permissions=8&scope=bot",
@@ -314,16 +355,18 @@ async def invite(ctx):
 # тестовая команда, выводит всех участников всех серверов
 @bot.command()
 async def members(ctx):
-    for guild in bot.guilds:
-        for member in guild.members:
-            await ctx.send(member)
+    async with ctx.typing():
+        for guild in bot.guilds:
+            for member in guild.members:
+                await ctx.send(member)
 
 
 @bot.command(name="meme", aliases=("mem", "мем", "прикол", "пикча"))
 async def meme(ctx):
-    random_meme = random.choice(data['memes']['ru'])
-    embed_with_meme = discord.Embed(color=discord.Color.blue())
-    embed_with_meme.set_image(url=random_meme)
+    async with ctx.typing():
+        random_meme = random.choice(data['memes']['ru'])
+        embed_with_meme = discord.Embed(color=discord.Color.blue())
+        embed_with_meme.set_image(url=random_meme)
     await ctx.send(embed=embed_with_meme)
 
 
@@ -331,33 +374,38 @@ async def meme(ctx):
 async def download(ctx, link_to_download):
     con = await pool.acquire()
     cur = await con.cursor()
-    options = {  # Настройки youtube_dl
+    options = {  # настройки youtube_dl
         'outtmpl': '%(title)s-%(id)s.%(ext)s',
-        'format': 'best'
+        'format': 'best',
+        'silent': True
     }
-    ydl = youtube_dl.YoutubeDL(options)
-    r = ydl.extract_info(link_to_download, download=False)  # Вставляем нашу ссылку с ютуба
-    video_url = r['url']  # Получаем прямую ссылку на скачивание видео
-    redirect_id = (str(uuid.uuid4()))[0:8]
-    await cur.execute(f"INSERT INTO `redirects` (`token`, `url`) VALUES (%s, %s)",
-                      (redirect_id, video_url))
-    url_to_send = f"https://garold.forumidey.ru/redirect?token={redirect_id}"
-    await ctx.send(embed=discord.Embed(title=lang_data[(await get_lang(ctx.guild.id))]['download']['download_now'],
-                                       url=url_to_send))
+    async with ctx.typing():
+        ydl = youtube_dl.YoutubeDL(options)
+        r = ydl.extract_info(link_to_download, download=False)  # Вставляем нашу ссылку с ютуба
+        video_url = r['url']  # Получаем прямую ссылку на скачивание видео
+        redirect_id = (str(uuid.uuid4()))[0:8]
+        await cur.execute(f"INSERT INTO `redirects` (`token`, `url`) VALUES (%s, %s)",
+                          (redirect_id, video_url))
+        url_to_send = f"https://garold.forumidey.ru/redirect?token={redirect_id}"
+        await ctx.send(embed=discord.Embed(title=lang_data[(await get_lang(ctx))]['download']['download_now'],
+                                           url=url_to_send))
+    await pool.release(con)
 
 
-@bot.command(pass_context=True, no_pm=True)
-async def play(ctx, *, song: str):
-    voice_channel = ctx.author.voice.channel
-    # only play music if user is in a voice channel
-    if voice_channel is not None:
-        # grab user's voice channel
-        channel = voice_channel.name
-        await ctx.send('User is in channel: ' + channel)
-        # create StreamPlayer
-        vc = await voice_channel.connect()
-        vc.play(discord.FFmpegPCMAudio('testing.mp3'))
-        ctx.send(vc.is_playing())
+# @bot.command(pass_context=True, no_pm=True)
+# async def play(ctx, *, song: str):
+#     voice_channel = ctx.author.voice.channel
+#     # only play music if user is in a voice channel
+#     if voice_channel is not None:
+#         # grab user's voice channel
+#         channel = voice_channel.name
+#         await ctx.send('User is in channel: ' + channel)
+#         # create StreamPlayer
+#         vc = await voice_channel.connect()
+#         vc.play(discord.FFmpegPCMAudio('testing.mp3'), after=lambda e: print('done', e))
+#         vc.resume()
+#         await asyncio.sleep(10)
+#         await ctx.send(vc.is_playing())
 
 
 ##################################
