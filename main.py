@@ -23,6 +23,7 @@ from discord.ext import commands
 
 try:
     import uvloop
+
     print("Отлично! Будем использовать uvloop")
     asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
 except ModuleNotFoundError:
@@ -141,7 +142,7 @@ async def get_message_prefix(given_bot, message):
             await pool.release(con)
             return default_prefix
     else:
-        return default_prefix
+        return ''
 
 
 # создаём бота
@@ -324,16 +325,6 @@ async def prefix(ctx, new_prefix=None):
 
 
 # команда смена языка
-@bot.command(no_pm=True)
-@commands.has_permissions(administrator=True)
-async def lang(ctx):
-    await ctx.send("started")
-
-    def check_reaction(react):
-        return react.message_id == ctx.message.id and react.member.id == ctx.author.id
-
-    payload = await bot.wait_for('raw_reaction_add', timeout=60, check=check_reaction)
-    await ctx.send(payload.emoji.name)
 
 
 # приглашение на сервер поддержки
@@ -390,6 +381,44 @@ async def download(ctx, link_to_download):
         await ctx.send(embed=discord.Embed(title=lang_data[(await get_lang(ctx))]['download']['download_now'],
                                            url=url_to_send))
     await pool.release(con)
+
+
+@bot.command(no_pm=True)
+@commands.has_permissions(administrator=True)
+async def lang(ctx):
+    current_lang = await get_lang(ctx)
+    sent_message = await ctx.send(embed=discord.Embed(title=lang_data[current_lang]['lang']['wait']['title'],
+                                                      description=lang_data[current_lang]['lang']['wait']['content'],
+                                                      color=discord.Color.green()))
+    await sent_message.add_reaction('🇺🇸')
+    await sent_message.add_reaction('🇷🇺')
+
+    def check_reaction(react):
+        return react.message_id == sent_message.id and react.member.id == ctx.author.id
+
+    try:
+        payload = await bot.wait_for('raw_reaction_add', timeout=10, check=check_reaction)
+        reaction = str(payload.emoji)
+        con = await pool.acquire()
+        cur = await con.cursor()
+
+        if reaction == '🇷🇺':
+            await sent_message.edit(embed=discord.Embed(title=lang_data['ru']['lang']['done']['title'],
+                                                        description=lang_data['ru']['lang']['done']['content'],
+                                                        color=discord.Color.green()))
+            await cur.execute("UPDATE `guilds` SET `lang` = %s WHERE `id` = %s", ('ru', ctx.guild.id))
+        if reaction == '🇺🇸':
+            await sent_message.edit(embed=discord.Embed(title=lang_data['en']['lang']['done']['title'],
+                                                        description=lang_data['en']['lang']['done']['content'],
+                                                        color=discord.Color.green()))
+            await cur.execute("UPDATE `guilds` SET `lang` = %s WHERE `id` = %s", ('en', ctx.guild.id))
+        await pool.release(con)
+    except asyncio.exceptions.TimeoutError:
+        embed_description = lang_data[current_lang]['lang']['timeout']['content']
+        embed_description = embed_description.replace("%cp%", await get_prefix(ctx))
+        await sent_message.edit(embed=discord.Embed(title=lang_data[current_lang]['lang']['timeout']['title'],
+                                                    description=embed_description,
+                                                    color=discord.Color.green()))
 
 
 # @bot.command(pass_context=True, no_pm=True)

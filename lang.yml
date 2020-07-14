@@ -16,6 +16,16 @@ en:
       and something else"
       - "test page 2"
       - "Test page 3"
+  lang:
+    wait:
+      title: "Language change"
+      content: "Please, select new language by adding flag"
+    done:
+      title: "Done!"
+      content: "Guild language successful changed to English!"
+    timeout:
+      title: "Timeout, try again"
+      content: "Send %cp%lang to change language"
 ru:
   download:
     download_now: "Скачать!"
@@ -30,3 +40,13 @@ ru:
       - "Test page 1"
       - "test page 2"
       - "Test page 3"
+  lang:
+    wait:
+      title: "Смена языка"
+      content: "Выберите новый язык нажатием на флаг"
+    done:
+      title: "Готово!"
+      content: "Язык сервера изменён на Русский!"
+    timeout:
+      title: "Время вышло"
+      content: "Ещё раз отправьте %cp%lang, чтобы сменить язык"
