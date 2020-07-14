@@ -284,7 +284,7 @@ async def help(ctx):
         embeds.append(discord.Embed(title=page_title, description=embed_description, color=discord.Color.green()))
     # создаём массив страниц
     msg = await ctx.send(embed=embeds[0])
-    page = Paginator(bot, msg, only=ctx.author, use_more=False, embeds=embeds, footer=False, timeout=120)
+    page = Paginator(bot, msg, only=ctx.author, use_more=False, embeds=embeds, footer=False, timeout=300)
     await page.start()
 
 
@@ -397,7 +397,7 @@ async def lang(ctx):
         return react.message_id == sent_message.id and react.member.id == ctx.author.id
 
     try:
-        payload = await bot.wait_for('raw_reaction_add', timeout=10, check=check_reaction)
+        payload = await bot.wait_for('raw_reaction_add', timeout=300, check=check_reaction)
         reaction = str(payload.emoji)
         con = await pool.acquire()
         cur = await con.cursor()
