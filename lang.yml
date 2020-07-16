@@ -16,6 +16,12 @@ en:
       and something else"
       - "test page 2"
       - "Test page 3"
+  help_config:
+    title: "Помощь %current_page%/%total_pages%"
+    pages:
+      - "Test page 1"
+      - "test page 2"
+      - "Test page 3"
   lang:
     wait:
       title: "Language change"
@@ -40,6 +46,23 @@ ru:
       - "Test page 1"
       - "test page 2"
       - "Test page 3"
+  help_config:
+    1:
+      title: "АвтоРеакции %current_page%/%total_pages%"
+      content: "%cp%config reactEnabled true/false: включить ли автоматическое добвление реакций к сообщениям
+
+      %cp%config reactChance 0-100: вероятность добавления реакции
+
+      %cp%config reactUseYour true/false: использовать ли реакции с вашего сервера
+
+      %cp%config reactUseOfficial true/false: использовать ли наши реакции"
+    2:
+      title: "Пока тут ничего %current_page%/%total_pages%"
+      content: "%cp%config reactEnabled true/false: включить ли автоматическое добвление реакций к сообщениям
+
+      %cp%config reactChance 0-100: вероятность добавления реакции
+
+      %cp%config reactUseYour true/false: использовать ли реакции с вашего сервера"
   lang:
     wait:
       title: "Смена языка"

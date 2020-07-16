@@ -29,7 +29,7 @@ try:
 except ModuleNotFoundError:
     print("У вас не установлен uvloop")
 
-debug = False
+debug = True
 
 # импорт языков
 with open('lang.yml', 'r', encoding="UTF-8") as lang_file:
@@ -83,14 +83,14 @@ async def mysql_connect():
             created_pool = await aiomysql.create_pool(host=config['db']['host'], user=config['db']['user'],
                                                       password=config['db']['password'],
                                                       db=config['db']['name'], charset=config['db']['charset'],
-                                                      autocommit=True, loop=loop, maxsize=100,
-                                                      minsize=5, echo=True)
+                                                      autocommit=True, loop=loop, maxsize=10,
+                                                      minsize=1, echo=True)
         else:
             created_pool = await aiomysql.create_pool(host=config['db']['host'], user=config['db']['user'],
                                                       password=config['db']['password'],
                                                       db=config['db']['name'], charset=config['db']['charset'],
-                                                      autocommit=True, loop=loop, maxsize=100,
-                                                      minsize=5, echo=False)
+                                                      autocommit=True, loop=loop, maxsize=10,
+                                                      minsize=1, echo=False)
     except pymysql.err.OperationalError:
         print(f"Не могу подключиться к MySQL серверу на {config['db']['host']}, проверьте соединение с интернетом!")
         sys.exit(16)
@@ -229,7 +229,7 @@ async def on_guild_join(guild):
 async def on_command_error(ctx, error):
     emoji_guild = await bot.fetch_guild(719833247374377030)
     emoji_load = discord.utils.get(emoji_guild.emojis, name="load")
-    await ctx.message.add_reaction(str(emoji_load))
+    await ctx.message.add_reaction(emoji_load)
     errors_channel = bot.get_channel(720535391001772143)
     if ctx.guild is not None:
         await errors_channel.send(embed=discord.Embed(description=f"{ctx.author} на сервере {ctx.guild.name} "
@@ -244,6 +244,28 @@ async def on_command_error(ctx, error):
 @bot.event
 async def on_message(message):
     await bot.process_commands(message)
+    if message.guild is not None:
+        con = await pool.acquire()
+        cur = await con.cursor()
+        await cur.execute(f"SELECT `reactEnabled` FROM `guilds` WHERE `id` = %s", (message.guild.id,))
+        if (await cur.fetchone())[0]:
+            await cur.execute(f"SELECT `reactChance` FROM `guilds` WHERE `id` = %s", (message.guild.id,))
+            if random.uniform(0, 100) < (await cur.fetchone())[0]:
+                await cur.execute(f"SELECT `reactUseYour` FROM `guilds` WHERE `id` = %s", (message.guild.id,))
+                react_use_your = (await cur.fetchone())[0]
+                await cur.execute(f"SELECT `reactUseOfficial` FROM `guilds` WHERE `id` = %s", (message.guild.id,))
+                react_use_official = (await cur.fetchone())[0]
+                reactions_list = ()
+                do_i_need_to_continue = False
+                if react_use_your:
+                    reactions_list = reactions_list + message.guild.emojis
+                    do_i_need_to_continue = True
+                if react_use_official:
+                    official_server = (await bot.fetch_guild(719833247374377030))
+                    reactions_list = reactions_list + official_server.emojis
+                    do_i_need_to_continue = True
+                if do_i_need_to_continue:
+                    await message.add_reaction(random.choice(reactions_list))
 
 
 ##################################
@@ -288,12 +310,6 @@ async def help(ctx):
     await page.start()
 
 
-# тестовая команда
-@bot.command()
-async def test(ctx, *, arg):
-    await ctx.send(arg)
-
-
 # команда спама
 @commands.has_permissions(administrator=True)
 @bot.command()
@@ -324,9 +340,6 @@ async def prefix(ctx, new_prefix=None):
         await pool.release(con)
 
 
-# команда смена языка
-
-
 # приглашение на сервер поддержки
 @bot.command()
 async def support(ctx):
@@ -341,15 +354,6 @@ async def invite(ctx):
                                                    f"/authorize?client_id"
                                                    f"=719498715769077771&permissions=8&scope=bot",
                                        colour=discord.Color.blue()))
-
-
-# тестовая команда, выводит всех участников всех серверов
-@bot.command()
-async def members(ctx):
-    async with ctx.typing():
-        for guild in bot.guilds:
-            for member in guild.members:
-                await ctx.send(member)
 
 
 @bot.command(name="meme", aliases=("mem", "мем", "прикол", "пикча"))
@@ -419,6 +423,33 @@ async def lang(ctx):
         await sent_message.edit(embed=discord.Embed(title=lang_data[current_lang]['lang']['timeout']['title'],
                                                     description=embed_description,
                                                     color=discord.Color.green()))
+
+
+@bot.group(name="config")
+async def configuration(ctx):
+    if ctx.invoked_subcommand is None:
+        # узнаём язык
+        guild_lang = await get_lang(ctx)
+        # узнаём префикс
+        guild_prefix = await get_prefix(ctx)
+        embeds = []
+        # выставляем страницы
+        for i in range(0, len(lang_data[guild_lang]['help_config'])):
+            page_title = lang_data[guild_lang]['help_config'][i + 1]['title']
+            page_title = page_title.replace("%current_page%", str(i + 1))
+            page_title = page_title.replace("%total_pages%", str(len(lang_data[guild_lang]['help_config'])))
+            embed_description = lang_data[guild_lang]['help_config'][i + 1]['content']
+            embed_description = embed_description.replace("%cp%", guild_prefix)
+            embeds.append(discord.Embed(title=page_title, description=embed_description, color=discord.Color.green()))
+        # создаём массив страниц
+        msg = await ctx.send(embed=embeds[0])
+        page = Paginator(bot, msg, only=ctx.author, use_more=False, embeds=embeds, footer=False, timeout=300)
+        await page.start()
+
+
+@configuration.command()
+async def push(ctx, remote: str, branch: str):
+    await ctx.send('Pushing to {} {}'.format(remote, branch))
 
 
 # @bot.command(pass_context=True, no_pm=True)
