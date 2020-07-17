@@ -115,15 +115,15 @@ async def get_prefix(context):
         prefix_row = await cur.fetchone()
         if prefix_row is not None:
             await pool.release(con)
-            return commands.when_mentioned_or(prefix_row[0])
+            return prefix_row[0]
         else:
             await cur.execute(f"INSERT INTO `guilds` (`id`, `lang`, `prefix`) VALUES (%s, %s, %s)",
                               (context.guild.id, default_lang, default_prefix))
             print(f"В БД был добавлен сервер №{context.guild.id}")
             await pool.release(con)
-            return commands.when_mentioned_or(default_prefix)
+            return default_prefix
     else:
-        return commands.when_mentioned_or(default_prefix)
+        return default_prefix
 
 
 async def get_message_prefix(given_bot, message):
@@ -134,15 +134,15 @@ async def get_message_prefix(given_bot, message):
         prefix_row = await cur.fetchone()
         if prefix_row is not None:
             await pool.release(con)
-            return prefix_row[0]
+            return commands.when_mentioned_or(prefix_row[0])(bot, message)
         else:
             await cur.execute(f"INSERT INTO `guilds` (`id`, `lang`, `prefix`) VALUES (%s, %s, %s)",
                               (message.guild.id, default_lang, default_prefix))
             print(f"В БД был добавлен сервер №{message.guild.id}")
             await pool.release(con)
-            return default_prefix
+            return commands.when_mentioned_or(default_prefix)(bot, message)
     else:
-        return ''
+        return commands.when_mentioned_or(default_prefix)(bot, message)
 
 
 # создаём бота
