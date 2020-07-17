@@ -29,7 +29,7 @@ try:
 except ModuleNotFoundError:
     print("У вас не установлен uvloop")
 
-debug = True
+debug = False
 
 # импорт языков
 with open('lang.yml', 'r', encoding="UTF-8") as lang_file:
@@ -244,6 +244,8 @@ async def on_command_error(ctx, error):
 @bot.event
 async def on_message(message):
     await bot.process_commands(message)
+    if message.content[0: 22] == "<@!719498715769077771>":
+        await message.channel.send("Чего тебе надо?")
     if message.guild is not None:
         con = await pool.acquire()
         cur = await con.cursor()
@@ -266,6 +268,7 @@ async def on_message(message):
                     do_i_need_to_continue = True
                 if do_i_need_to_continue:
                     await message.add_reaction(random.choice(reactions_list))
+        await pool.release(con)
 
 
 ##################################
@@ -509,7 +512,7 @@ async def keyboard_handler():
 
 
 # запускаем фоновые задачи
-bot.loop.create_task(locker())
+# bot.loop.create_task(locker())
 bot.loop.create_task(pool_cleaner())
 bot.loop.create_task(keyboard_handler())
 
