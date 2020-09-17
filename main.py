@@ -25,7 +25,7 @@ try:
     import uvloop
 
     print("Отлично! Будем использовать uvloop")
-    asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
+    uvloop.install()
 except ModuleNotFoundError:
     print("У вас не установлен uvloop")
 
